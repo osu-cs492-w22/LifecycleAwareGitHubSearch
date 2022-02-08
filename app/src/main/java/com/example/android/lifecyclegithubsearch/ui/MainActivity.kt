@@ -37,6 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var loadingIndicator: CircularProgressIndicator
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        Log.d(tag, "onCreate()")
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -60,6 +62,16 @@ class MainActivity : AppCompatActivity() {
                 searchResultsListRV.scrollToPosition(0)
             }
         }
+    }
+
+    override fun onResume() {
+        Log.d(tag, "onResume()")
+        super.onResume()
+    }
+
+    override fun onPause() {
+        Log.d(tag, "onPause()")
+        super.onPause()
     }
 
     private fun doRepoSearch(q: String, sort: String = "stars") {
