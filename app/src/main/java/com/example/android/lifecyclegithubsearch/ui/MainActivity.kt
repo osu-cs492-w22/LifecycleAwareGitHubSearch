@@ -9,6 +9,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.android.volley.Request
@@ -20,6 +21,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.JsonAdapter
 import com.example.android.lifecyclegithubsearch.data.GitHubRepo
 import com.example.android.lifecyclegithubsearch.data.GitHubSearchResults
+import com.example.android.lifecyclegithubsearch.data.LoadingStatus
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 
@@ -28,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private val tag = "MainActivity"
 
     private val repoListAdapter = GitHubRepoListAdapter(::onGitHubRepoClick)
+    private val viewModel: GitHubSearchViewModel by viewModels()
 
     private lateinit var requestQueue: RequestQueue
 
@@ -54,11 +57,36 @@ class MainActivity : AppCompatActivity() {
 
         searchResultsListRV.adapter = repoListAdapter
 
+        viewModel.searchResults.observe(this) { searchResults ->
+            repoListAdapter.updateRepoList(searchResults)
+        }
+
+        viewModel.loadingStatus.observe(this) { loadingStatus ->
+            when (loadingStatus) {
+                LoadingStatus.LOADING -> {
+                    loadingIndicator.visibility = View.VISIBLE
+                    searchResultsListRV.visibility = View.INVISIBLE
+                    searchErrorTV.visibility = View.INVISIBLE
+                }
+                LoadingStatus.ERROR -> {
+                    loadingIndicator.visibility = View.INVISIBLE
+                    searchResultsListRV.visibility = View.INVISIBLE
+                    searchErrorTV.visibility = View.VISIBLE
+                }
+                else -> {
+                    loadingIndicator.visibility = View.INVISIBLE
+                    searchResultsListRV.visibility = View.VISIBLE
+                    searchErrorTV.visibility = View.INVISIBLE
+                }
+            }
+        }
+
         val searchBtn: Button = findViewById(R.id.btn_search)
         searchBtn.setOnClickListener {
             val query = searchBoxET.text.toString()
             if (!TextUtils.isEmpty(query)) {
-                doRepoSearch(query)
+//                doRepoSearch(query)
+                viewModel.loadSearchResults(query)
                 searchResultsListRV.scrollToPosition(0)
             }
         }
@@ -74,36 +102,36 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    private fun doRepoSearch(q: String, sort: String = "stars") {
-        val url = "$apiBaseUrl/search/repositories?q=$q&sort=$sort"
-
-        val moshi = Moshi.Builder()
-            .addLast(KotlinJsonAdapterFactory())
-            .build()
-        val jsonAdapter: JsonAdapter<GitHubSearchResults> =
-            moshi.adapter(GitHubSearchResults::class.java)
-
-        val req = StringRequest(
-            Request.Method.GET,
-            url,
-            {
-                val results = jsonAdapter.fromJson(it)
-                repoListAdapter.updateRepoList(results?.items)
-                loadingIndicator.visibility = View.INVISIBLE
-                searchResultsListRV.visibility = View.VISIBLE
-            },
-            {
-                Log.d(tag, "Error fetching from $url: ${it.message}")
-                loadingIndicator.visibility = View.INVISIBLE
-                searchErrorTV.visibility = View.VISIBLE
-            }
-        )
-
-        loadingIndicator.visibility = View.VISIBLE
-        searchResultsListRV.visibility = View.INVISIBLE
-        searchErrorTV.visibility = View.INVISIBLE
-        requestQueue.add(req)
-    }
+//    private fun doRepoSearch(q: String, sort: String = "stars") {
+//        val url = "$apiBaseUrl/search/repositories?q=$q&sort=$sort"
+//
+//        val moshi = Moshi.Builder()
+//            .addLast(KotlinJsonAdapterFactory())
+//            .build()
+//        val jsonAdapter: JsonAdapter<GitHubSearchResults> =
+//            moshi.adapter(GitHubSearchResults::class.java)
+//
+//        val req = StringRequest(
+//            Request.Method.GET,
+//            url,
+//            {
+//                val results = jsonAdapter.fromJson(it)
+//                repoListAdapter.updateRepoList(results?.items)
+//                loadingIndicator.visibility = View.INVISIBLE
+//                searchResultsListRV.visibility = View.VISIBLE
+//            },
+//            {
+//                Log.d(tag, "Error fetching from $url: ${it.message}")
+//                loadingIndicator.visibility = View.INVISIBLE
+//                searchErrorTV.visibility = View.VISIBLE
+//            }
+//        )
+//
+//        loadingIndicator.visibility = View.VISIBLE
+//        searchResultsListRV.visibility = View.INVISIBLE
+//        searchErrorTV.visibility = View.INVISIBLE
+//        requestQueue.add(req)
+//    }
 
     private fun onGitHubRepoClick(repo: GitHubRepo) {
         val intent = Intent(this, RepoDetailActivity::class.java).apply {
